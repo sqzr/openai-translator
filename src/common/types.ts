@@ -42,6 +42,7 @@ export interface IThemedStyleProps {
 }
 
 export interface ISettings {
+    accesstoken: string
     apiKeys: string
     apiURL: string
     apiURLPath: string

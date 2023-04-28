@@ -24,6 +24,7 @@ export async function getApiKey(): Promise<string> {
 
 // In order to let the type system remind you that all keys have been passed to browser.storage.sync.get(keys)
 const settingKeys: Record<keyof ISettings, number> = {
+    accesstoken: 1,
     apiKeys: 1,
     apiURL: 1,
     apiURLPath: 1,
@@ -48,6 +49,9 @@ export async function getSettings(): Promise<ISettings> {
     const items = await browser.storage.sync.get(Object.keys(settingKeys))
 
     const settings = items as ISettings
+    if (!settings.accesstoken) {
+        settings.accesstoken = ''
+    }
     if (!settings.apiKeys) {
         settings.apiKeys = ''
     }

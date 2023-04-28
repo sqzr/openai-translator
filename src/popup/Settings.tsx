@@ -435,27 +435,11 @@ function APIModelSelector(props: APIModelSelectorProps) {
                 { label: 'gpt-4-32k-0314', id: 'gpt-4-32k-0314' },
             ])
         } else if (props.provider === 'ChatGPT') {
-            fetch(utils.defaultChatGPTAPIAuthSession, { cache: 'no-cache' })
-                .then((response) => response.json())
-                .then((resp) => {
-                    const headers: Record<string, string> = {
-                        Authorization: `Bearer ${resp.accessToken}`,
-                    }
-                    return fetch(`${utils.defaultChatGPTWebAPI}/models`, {
-                        cache: 'no-cache',
-                        headers,
-                    }).then((response) => response.json())
-                })
-                .then((models) => {
-                    if (!models || !models.models) {
-                        return
-                    }
-                    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                    setOptions(models.models.map((model: any) => ({ label: model.title, id: model.slug })))
-                })
-                .catch((e) => {
-                    console.error(e)
-                })
+            setOptions([
+                { label: 'Default (GPT-3.5)', id: 'text-davinci-002-render-sha' },
+                { label: 'gpt-4', id: 'GPT-4' },
+                { label: 'Legacy (GPT-3.5)', id: 'text-davinci-002-render-paid' },
+            ])
         }
     }, [props.provider])
 
@@ -743,6 +727,7 @@ export function Settings(props: IPopupProps) {
     const [loading, setLoading] = useState(false)
     const [values, setValues] = useState<ISettings>({
         apiKeys: '',
+        accesstoken: '',
         apiURL: utils.defaultAPIURL,
         apiURLPath: utils.defaultAPIURLPath,
         apiModel: utils.defaultAPIModel,
@@ -920,7 +905,7 @@ export function Settings(props: IPopupProps) {
                             </FormItem>
                         )}
                         {values.provider !== 'Azure' && (
-                            <FormItem name='apiModel' label={t('API Model')}>
+                            <FormItem required name='apiModel' label={t('API Model')}>
                                 <APIModelSelector provider={values.provider} onBlur={onBlur} />
                             </FormItem>
                         )}
@@ -931,6 +916,16 @@ export function Settings(props: IPopupProps) {
                                 </FormItem>
                                 <FormItem required name='apiURLPath' label={t('API URL Path')}>
                                     <Input size='compact' />
+                                </FormItem>
+                            </>
+                        )}
+                        {values.provider === 'ChatGPT' && (
+                            <>
+                                <FormItem required name='apiURL' label={t('API URL')}>
+                                    <Input size='compact' onBlur={onBlur} />
+                                </FormItem>
+                                <FormItem required name='accesstoken' label='accesstoken'>
+                                    <Input size='compact' type='password'  onBlur={onBlur}  />
                                 </FormItem>
                             </>
                         )}

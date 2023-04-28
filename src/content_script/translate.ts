@@ -186,7 +186,7 @@ export async function translate(query: TranslateQuery) {
         body['stop'] = ['<|im_end|>']
     } else if (settings.provider === 'ChatGPT') {
         let resp: Response | null = null
-        try {
+        /* try {
             resp = await backgroundFetch(utils.defaultChatGPTAPIAuthSession, { signal: query.signal })
             const respJson = await resp?.json()
             apiKey = respJson.accessToken
@@ -195,7 +195,7 @@ export async function translate(query: TranslateQuery) {
                 query.onError(error.message)
                 return
             }
-        }
+        } */
         body = {
             action: 'next',
             messages: [
@@ -228,7 +228,8 @@ export async function translate(query: TranslateQuery) {
     switch (settings.provider) {
         case 'OpenAI':
         case 'ChatGPT':
-            headers['Authorization'] = `Bearer ${apiKey}`
+            
+            headers['Authorization'] = `Bearer ${settings.accesstoken}`
             break
 
         case 'Azure':
@@ -239,30 +240,78 @@ export async function translate(query: TranslateQuery) {
     if (settings.provider === 'ChatGPT') {
         let conversationId = ''
         try {
-            const resp = await backgroundFetch(`${utils.defaultChatGPTWebAPI}/conversation`, {
+            await fetchSSE(settings.apiURL, {
                 method: 'POST',
                 headers,
                 body: JSON.stringify(body),
                 signal: query.signal,
+                onMessage: (msg) => {
+                    let resp
+                    try {
+                        resp = JSON.parse(msg)
+                        // eslint-disable-next-line no-empty
+                    } catch {
+                        query.onFinish('stop')
+                        return
+                    }
+    
+                    const { message } = resp
+                    if (!message || message.length === 0) {
+                        return { error: 'No result' }
+                    }
+
+                    const { content, author } = message
+                    if (author.role === 'assistant') {
+                        let targetTxt = content.parts.join('')
+                        query.onMessage({ content: targetTxt, role: '', isWordMode, isFullText: true })
+                    }
+
+                    if(message.end_turn){
+                        query.onFinish('stop')
+                    }
+
+
+                    if(!conversationId){
+                        conversationId = resp.conversation_id
+                    }
+
+                    
+
+                
+                },
+                onError: (err) => {
+                    const { error } = err
+                    query.onError(error.message)
+                },
             })
-            const respJson = await resp.json()
-            if (!conversationId) {
-                conversationId = respJson.conversation_id
-            }
 
-            const { finish_details: finishDetails } = respJson.message
-            if (finishDetails) {
-                query.onFinish(finishDetails.type)
-                return
-            }
+            // await fetchSSE(`https://openai-webapp-jdks88h.wgjstc.com/conversation`, {
+            //     method: 'POST',
+            //     headers,
+            //     body: JSON.stringify(body),
+            //     signal: query.signal,
+            //     onMessage: (msg) => {
 
-            let targetTxt = ''
+            //     }
+            // })
+            // // const respJson = await resp.json()
+            // if (!conversationId) {
+            //     conversationId = respJson.conversation_id
+            // }
 
-            const { content, author } = respJson.message
-            if (author.role === 'assistant') {
-                targetTxt = content.parts.join('')
-                query.onMessage({ content: targetTxt, role: '', isWordMode, isFullText: true })
-            }
+            // const { finish_details: finishDetails } = respJson.message
+            // if (finishDetails) {
+            //     query.onFinish(finishDetails.type)
+            //     return
+            // }
+
+            // let targetTxt = ''
+
+            // const { content, author } = respJson.message
+            // if (author.role === 'assistant') {
+            //     targetTxt = content.parts.join('')
+            //     query.onMessage({ content: targetTxt, role: '', isWordMode, isFullText: true })
+            // }
         } catch (error) {
             if (error instanceof Error) {
                 query.onError(error.message)
@@ -271,7 +320,7 @@ export async function translate(query: TranslateQuery) {
         }
 
         if (conversationId) {
-            await backgroundFetch(`${utils.defaultChatGPTWebAPI}/conversation/${conversationId}`, {
+            await backgroundFetch(`${settings.apiURL}/${conversationId}`, {
                 method: 'PATCH',
                 headers,
                 body: JSON.stringify({ is_visible: false }),
