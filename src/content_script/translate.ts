@@ -254,6 +254,10 @@ export async function translate(query: TranslateQuery) {
                         query.onFinish('stop')
                         return
                     }
+
+                    if(resp.errorMessage){
+                        return { error: resp.errorMessage }
+                    }
     
                     const { message } = resp
                     if (!message || message.length === 0) {
@@ -284,34 +288,6 @@ export async function translate(query: TranslateQuery) {
                     query.onError(error.message)
                 },
             })
-
-            // await fetchSSE(`https://openai-webapp-jdks88h.wgjstc.com/conversation`, {
-            //     method: 'POST',
-            //     headers,
-            //     body: JSON.stringify(body),
-            //     signal: query.signal,
-            //     onMessage: (msg) => {
-
-            //     }
-            // })
-            // // const respJson = await resp.json()
-            // if (!conversationId) {
-            //     conversationId = respJson.conversation_id
-            // }
-
-            // const { finish_details: finishDetails } = respJson.message
-            // if (finishDetails) {
-            //     query.onFinish(finishDetails.type)
-            //     return
-            // }
-
-            // let targetTxt = ''
-
-            // const { content, author } = respJson.message
-            // if (author.role === 'assistant') {
-            //     targetTxt = content.parts.join('')
-            //     query.onMessage({ content: targetTxt, role: '', isWordMode, isFullText: true })
-            // }
         } catch (error) {
             if (error instanceof Error) {
                 query.onError(error.message)
